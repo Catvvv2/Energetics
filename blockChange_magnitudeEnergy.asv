@@ -1,0 +1,66 @@
+function fH = blockChange_magnitudeEnergy(data,behOI,z_score)
+    % takes behOI string and plots that field in data struct aligned to the
+    % block changes
+    
+    global params
+
+    fH = figure(); hold all;
+    
+    % export parameters
+    minTrial = params.minTrial;
+    maxTrial = params.maxTrial;
+
+    xpos = minTrial:maxTrial;
+    keepY = [];
+    
+    for f = 1:length(data)
+    
+        % pull out the y data
+        y = data(f).(behOI);
+        if nargin > 2 && z_score
+            y = (y - nanmean(y))./nanstd(y);
+        end
+
+        % aligned to objective block changes
+        changes = find([data(f).reversal]==1);
+    
+        % exclude too longs/too shorts
+        changes = changes(and(changes+minTrial > 0,changes+maxTrial < length([data(f).reversal])));    
+    
+        % indexes now
+        indx = repmat(changes,1,size(xpos,2)) + repmat(xpos,size(changes,1),1);
+    
+        if params.plotRaw
+            % now the plot of this session's average
+            plot(xpos,nanmean(y(indx)))
+        end
+
+        keepY = y(indx);
+    end
+
+    % 
+    size(keepY)
+
+    % now we'll do our ribbon plots
+    m = nanmean(keepY);
+    e = nanste(keepY);
+
+    plot(xpos,m,'Color',params.defaultBlack,...
+        'LineWidth',2)
+    plot(xpos,m+e,'--','Color',params.defaultBlack,...
+        'LineWidth',1)
+    plot(xpos,m-e,'--','Color',params.defaultBlack,...
+        'LineWidth',1)
+    
+    % reference line at reversal trial
+    tmp = ylim;
+    line([0 0],[tmp(1) tmp(2)],'Color','k')
+ 
+    % append axis labels
+    set(gca,'FontSize',params.FontSize)
+    if nargin > 2 && z_score
+        ylabel(strcat(behOI,' (z-scored)'))
+    else
+        ylabel(behOI);
+    end
+    xlabel('trials since block change')
